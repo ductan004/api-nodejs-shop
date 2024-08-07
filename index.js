@@ -21,6 +21,7 @@ app.use("/api/v1/", catalogRoutes);
 app.use("/api/v1/", orderRoutes);
 app.use("/api/v1/", userRoutes);
 
+// Port
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
