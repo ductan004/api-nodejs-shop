@@ -2,20 +2,61 @@ const { error } = require("console");
 const db = require("../config/db"); // Ensure this uses mysql2 with promise support
 const cloudinary = require("cloudinary").v2;
 // Fetch all products
-const getProducts = async (limit) => {
+const getProducts = async (limit, offset) => {
   try {
-    const sql = "SELECT * FROM product ORDER BY created_at DESC LIMIT 0, ?";
-    const [results] = await db.query(sql, [limit]);
+    const sql =
+      "SELECT * FROM product ORDER BY created_at DESC LIMIT ? OFFSET ?";
+    const [results] = await db.query(sql, [limit, offset]);
     return results;
   } catch (err) {
     throw new Error(`Failed to fetch products: ${err.message}`);
   }
 };
 
+// Fetch products by catalog ID
+const getProductsByCatalog = async (catalogId, limit, offset) => {
+  try {
+    const sqlCatalog = "SELECT * FROM catalog WHERE id = ?";
+    const [catalog] = await db.query(sqlCatalog, [catalogId]);
+
+    if (catalog.length === 0) {
+      throw new Error(`Catalog with ID ${catalogId} does not exist`);
+    }
+
+    const sql =
+      "SELECT * FROM product WHERE id_catalog = ? ORDER BY id DESC LIMIT ? OFFSET ?";
+    const [results] = await db.query(sql, [catalogId, limit, offset]);
+    return results;
+  } catch (err) {
+    throw new Error(`Failed to fetch products by catalog: ${err.message}`);
+  }
+};
+
+const getTotalProductCount = async () => {
+  try {
+    let sql = `SELECT COUNT(*) AS total FROM product`;
+    const [result] = await db.query(sql);
+    return result[0].total;
+  } catch (err) {
+    throw new Error(`Failed to get total product count: ${err.message}`);
+  }
+};
+
+const getTotalProductCatalogCount = async (id_catalog) => {
+  try {
+    let sql = `SELECT COUNT(*) AS total FROM product WHERE id_catalog = ?`;
+    const [result] = await db.query(sql, [id_catalog]);
+    return result[0].total;
+  } catch (err) {
+    throw new Error(`Failed to get total product count: ${err.message}`);
+  }
+};
+
 // Fetch hot products
 const getProductHot = async (limit) => {
   try {
-    const sql = "SELECT * FROM product WHERE hot = 1 ORDER BY created_at desc LIMIT 0, ?";
+    const sql =
+      "SELECT * FROM product WHERE hot = 1 ORDER BY created_at desc LIMIT 0, ?";
     const [results] = await db.query(sql, [limit]);
     return results;
   } catch (err) {
@@ -26,7 +67,8 @@ const getProductHot = async (limit) => {
 // Fetch sale products
 const getProductSale = async (limit) => {
   try {
-    const sql = "SELECT * FROM product WHERE sale = 1 ORDER BY created_at desc LIMIT 0, ?";
+    const sql =
+      "SELECT * FROM product WHERE sale = 1 ORDER BY created_at desc LIMIT 0, ?";
     const [results] = await db.query(sql, [limit]);
     return results;
   } catch (err) {
@@ -49,24 +91,6 @@ const getProductById = async (id) => {
   }
 };
 
-// Fetch products by catalog ID
-const getProductsByCatalog = async (catalogId, limit) => {
-  try {
-    const sqlCatalog = "SELECT * FROM catalog WHERE id = ?";
-    const [catalog] = await db.query(sqlCatalog, [catalogId]);
-
-    if (catalog.length === 0) {
-      throw new Error(`Catalog with ID ${catalogId} does not exist`);
-    }
-
-    const sql = "SELECT * FROM product WHERE id_catalog = ? ORDER BY id DESC LIMIT ?";
-    const [results] = await db.query(sql, [catalogId, limit]);
-    return results;
-  } catch (err) {
-    throw new Error(`Failed to fetch products by catalog: ${err.message}`);
-  }
-};
-
 // Fetch related products
 const getRelatedProducts = async (productId) => {
   try {
@@ -80,7 +104,10 @@ const getRelatedProducts = async (productId) => {
     const catalogId = results[0].id_catalog;
 
     const relatedSql = "SELECT * FROM product WHERE id_catalog = ? AND id != ?";
-    const [relatedProducts] = await db.query(relatedSql, [catalogId, productId]);
+    const [relatedProducts] = await db.query(relatedSql, [
+      catalogId,
+      productId,
+    ]);
 
     return relatedProducts;
   } catch (err) {
@@ -169,4 +196,6 @@ module.exports = {
   getAdminProducts,
   deleteProduct,
   updateProduct,
+  getTotalProductCount,
+  getTotalProductCatalogCount,
 };

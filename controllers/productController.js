@@ -4,12 +4,65 @@ const productModel = require("../models/productModel");
 const { error } = require("console");
 // Fetch all products
 exports.fetchProducts = async (req, res) => {
-  const limi = parseInt(req.params.limi || 6);
+  const limit = parseInt(req.query.limit) || 6;
+  const page = parseInt(req.query.page) || 1;
+  const offset = (page - 1) * limit;
   try {
-    const data = await productModel.getProducts(limi);
-    res.json(data);
+    const data = await productModel.getProducts(limit, offset);
+    const totalProduct = await productModel.getTotalProductCount();
+    if (data.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "No product found for this status" });
+    }
+    res.json({
+      page,
+      limit,
+      total: totalProduct,
+      data,
+    });
   } catch (err) {
     res.status(500).json({ message: "Error fetching products", error: err });
+  }
+};
+
+exports.fetchProductByCatalog = async (req, res) => {
+  let limit = parseInt(req.query.limit) || 6;
+  const page = parseInt(req.query.page) || 1;
+  const offset = (page - 1) * limit;
+
+  const id_catalog = parseInt(req.params.id_catalog);
+  if (isNaN(id_catalog) || id_catalog <= 0) {
+    return res
+      .status(400)
+      .json({ message: "Invalid product id_catalog", id_catalog });
+  }
+  try {
+    const data = await productModel.getProductsByCatalog(
+      id_catalog,
+      limit,
+      offset
+    );
+    const totalProductCatalog = await productModel.getTotalProductCatalogCount(
+      id_catalog
+    );
+    if (data.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "No product found for this status" });
+    }
+
+    res.json({
+      page,
+      limit,
+      total: totalProductCatalog,
+      data,
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: "Error fetching products by catalog",
+      error: err.message,
+    });
   }
 };
 
@@ -29,7 +82,9 @@ exports.fetchProductSale = async (req, res) => {
     const data = await productModel.getProductSale(limi);
     res.json(data);
   } catch (err) {
-    res.status(500).json({ message: "Error fetching product Sale", error: err });
+    res
+      .status(500)
+      .json({ message: "Error fetching product Sale", error: err });
   }
 };
 
@@ -45,21 +100,9 @@ exports.fetchProductById = async (req, res) => {
     }
     res.json(data);
   } catch (err) {
-    res.status(500).json({ message: "Error fetching product details", error: err.message });
-  }
-};
-
-exports.fetchProductByCatalog = async (req, res) => {
-  let limi = parseInt(req.params.limi || 6);
-  const id_catalog = parseInt(req.params.id_catalog);
-  if (isNaN(id_catalog) || id_catalog <= 0) {
-    return res.status(400).json({ message: "Invalid product id_catalog", id_catalog });
-  }
-  try {
-    const data = await productModel.getProductsByCatalog(id_catalog, limi);
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ message: "Error fetching products by catalog", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Error fetching product details", error: err.message });
   }
 };
 
@@ -73,7 +116,9 @@ exports.fetchRelatedProducts = async (req, res) => {
     const data = await productModel.getRelatedProducts(id);
     res.json(data);
   } catch (err) {
-    res.status(500).json({ message: "Error fetching related products", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Error fetching related products", error: err.message });
   }
 };
 
@@ -84,7 +129,9 @@ exports.fetchAdminProducts = async (req, res) => {
     const data = await productModel.getAdminProducts(limi);
     res.json(data);
   } catch (err) {
-    return res.status(500).json({ message: "Error fetching admin products", error: err });
+    return res
+      .status(500)
+      .json({ message: "Error fetching admin products", error: err });
   }
 };
 
@@ -93,7 +140,9 @@ exports.addProduct = async (req, res) => {
   const img = req.file;
 
   if (!id_catalog || !name || !img) {
-    return res.status(400).json({ error: "id_catalog, name, and img are required" });
+    return res
+      .status(400)
+      .json({ error: "id_catalog, name, and img are required" });
   }
 
   const productData = {
@@ -116,7 +165,9 @@ exports.addProduct = async (req, res) => {
       imageUrl: img.path, // Trả về URL của ảnh
     });
   } catch (err) {
-    res.status(500).json({ error: "Failed to add product", details: err.message });
+    res
+      .status(500)
+      .json({ error: "Failed to add product", details: err.message });
   }
 };
 
@@ -126,7 +177,9 @@ exports.deleteProduct = async (req, res) => {
     await productModel.deleteProduct(productId);
     res.json({ message: "Product deleted successfully" });
   } catch (err) {
-    res.status(500).json({ error: "Failed to delete product", details: err.message });
+    res
+      .status(500)
+      .json({ error: "Failed to delete product", details: err.message });
   }
 };
 
@@ -186,7 +239,9 @@ exports.updateProduct = async (req, res) => {
     if (err.message === "Product not found") {
       res.status(404).json({ error: "Product not found" });
     } else {
-      res.status(500).json({ error: "Failed to update product", details: err.message });
+      res
+        .status(500)
+        .json({ error: "Failed to update product", details: err.message });
     }
   }
 };
